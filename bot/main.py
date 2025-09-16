@@ -82,7 +82,7 @@ async def on_message(message: discord.Message):
         await message.channel.send(reply)
 
 if __name__ == "__main__":
-    if not DISCORD_TOKEN or not os.getenv("OPENAI_API_KEY"):
-        logger.error("Missing DISCORD_TOKEN or OPENAI_API_KEY in environment.")
+    if not DISCORD_TOKEN or not os.getenv("GEMINI_API_KEY"):
+        logger.error("Missing DISCORD_TOKEN or GEMINI_API_KEY in environment.")
     else:
         client.run(DISCORD_TOKEN)
