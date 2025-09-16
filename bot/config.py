@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 ALLOWED_GUILD_IDS = [int(x) for x in os.getenv("ALLOWED_GUILD_IDS","").split(",") if x.strip()]
 ALLOWED_CHANNEL_IDS = [int(x) for x in os.getenv("ALLOWED_CHANNEL_IDS","").split(",") if x.strip()]
