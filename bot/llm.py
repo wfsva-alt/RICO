@@ -9,7 +9,7 @@ genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 class LLMClient:
-    def __init__(self, model="gemini-2.5-flash-lite"):
+    def __init__(self, model="gemini-2.5-flash"):
         self.model = model
         self.max_tokens = 500
         self.temperature = 0.7
