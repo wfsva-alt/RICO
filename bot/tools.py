@@ -1,5 +1,6 @@
 # bot/tools.py
-import ast, operator as op, tempfile, subprocess, time, logging
+import ast, operator as op, tempfile, subprocess, time, logging, os
+import requests
 from bot.logger import logger
 from bot.config import CODE_EXEC_ENABLED
 
@@ -10,9 +11,33 @@ _allowed_operators = {
 }
 
 def tool_web_search(query: str) -> str:
+    """
+    Uses Brave Search API to get web results.
+    Set BRAVE_API_KEY in your environment or .env file.
+    Get a free Brave Search API key at: https://search.brave.com/api
+    """
     logger.info("web_search called with query: %s", query)
-    # Placeholder: integrate a real web search (SerpAPI/Bing/Google) by replacing below
-    return f"Search results (stub) for '{query}'."
+    api_key = os.getenv("BRAVE_API_KEY")
+    if not api_key:
+        return "Error: BRAVE_API_KEY not set. Get one at https://search.brave.com/api."
+    try:
+        resp = requests.get(
+            "https://api.search.brave.com/res/v1/web/search",
+            headers={"Accept": "application/json", "X-Subscription-Token": api_key},
+            params={"q": query, "count": 3}
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        results = data.get("web", {}).get("results", [])
+        if not results:
+            return "No results found."
+        out = []
+        for r in results:
+            out.append(f"{r.get('title')}: {r.get('url')}")
+        return "\n".join(out)
+    except Exception as e:
+        logger.exception("Brave search error: %s", e)
+        return f"Error: {e}"
 
 def tool_calculator(expr: str) -> str:
     logger.info("calculator called with expr: %s", expr)
@@ -65,6 +90,7 @@ def tool_code_execute(code: str) -> str:
 
 TOOLS = {
     "web_search": tool_web_search,
+    "brave_search": tool_web_search,  # alias for clarity
     "calculate": tool_calculator,
     "file_store": tool_file_store,
     "code_execute": tool_code_execute
