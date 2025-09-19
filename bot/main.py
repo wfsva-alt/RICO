@@ -1,10 +1,6 @@
-import functools
-# List of creator Discord user IDs
-CREATOR_IDS = {756227441432723656, 760498940126298112}
-# Start the bot if run as a script
-
 # bot/main.py
 # MIT License
+import functools
 import os
 import asyncio
 import logging
@@ -12,15 +8,18 @@ import discord
 from bot.logger import logger
 from bot.config import DISCORD_TOKEN, ALLOWED_GUILD_IDS, ALLOWED_CHANNEL_IDS
 from bot.llm import LLMClient
-from bot.memory import short_term, long_term
+from bot.memory_manager import MemoryManager
 from bot.agent import Agent
 
 intents = discord.Intents.default()
 intents.message_content = True
 
 client = discord.Client(intents=intents)
-agent = Agent()            # uses LLMClient internally
+
 llm_client = LLMClient()   # optional direct use
+memory_manager = MemoryManager()
+agent = Agent()  # Initialize the agent
+
 
 def is_allowed_channel(message: discord.Message) -> bool:
     # If ALLOWED_GUILD_IDS / CHANNELS are empty, allow all
@@ -68,28 +67,35 @@ async def on_message(message: discord.Message):
             return
         async with message.channel.typing():
             try:
-                respectful = message.author.id in CREATOR_IDS
                 # Decide: direct chat or agent? use a prefix "agent:" or let planner decide
-                if query.lower().startswith("agent:") or query.lower().startswith("use tools"):
+                if query.lower().startswith("agent:") or query.lower().startswith("use tools") or query.lower().startswith("use tool"):
                     # strip prefix
                     q = query.split(":", 1)[-1].strip() if ":" in query else query
-                    # Add timeout for agent tool calls
-                    answer = await asyncio.wait_for(agent.run_agent(q, user_id=message.author.id), timeout=30)
+                    answer = await agent.run_agent(q, user_id=message.author.id, channel_id=message.channel.id)
                 else:
-                    # default: simple chat (keeps short-term memory)
-                    # build history from short-term memory
-                    short_term.add_message(message.author.id, f"User: {query}")
-                    history = []
-                    for msg in short_term.get_messages(message.author.id)[-10:]:
-                        history.append({"role": "user", "content": msg})
-                    # Limit LLM response length and add timeout
-                    answer = await asyncio.wait_for(
-                        llm_client.chat(history + [{"role":"user","content": query}], max_tokens=1000),
-                        timeout=30
+                    # Use new memory system for context/history
+                    # Add user message to channel context
+                    memory_manager.channel.add_message(
+                        message.channel.id, 
+                        query, 
+                        author=message.author.display_name or message.author.name
                     )
-                    short_term.add_message(message.author.id, f"Assistant: {answer}")
-                if respectful:
-                    answer = f"Respected creator {message.author.display_name}, {answer}"
+                    # Build prompt using all memory layers
+                    prompt = memory_manager.build_prompt(
+                        user_id=message.author.id,
+                        channel_id=message.channel.id,
+                        user_message=query
+                    )
+                    answer = await llm_client.chat([
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": query}
+                    ], max_tokens=1000)
+                    # Add bot response to channel context
+                    memory_manager.channel.add_message(
+                        message.channel.id, 
+                        answer, 
+                        author="RICO"
+                    )
                 # Always mention the user in the reply
                 mention = message.author.mention
                 answer = f"{mention} {answer}"
@@ -101,11 +107,16 @@ async def on_message(message: discord.Message):
             # Send long replies in multiple messages (Discord limit: 2000 chars)
             while answer:
                 chunk = answer[:2000]
-                await message.channel.send(chunk)
+                try:
+                    logger.info(f"Sending chunk of length {len(chunk)}")
+                    await message.channel.send(chunk)
+                except Exception as send_err:
+                    logger.exception(f"Error sending chunk: {send_err}")
+                    # Optionally break or continue; here, continue to try sending remaining chunks
                 answer = answer[2000:]
                 if answer:
                     await asyncio.sleep(0.5)
-            return
+        return
 
     # Case 2: DM (private message)
     if isinstance(message.channel, discord.DMChannel):
@@ -113,20 +124,30 @@ async def on_message(message: discord.Message):
             query = content
             try:
                 # Decide chat vs agent via prefix in DM: agent: ...
-                if query.lower().startswith("agent:"):
+                if query.lower().startswith("agent:") or query.lower().startswith("use tools") or query.lower().startswith("use tool"):
                     q = query.split(":", 1)[-1].strip()
-                    answer = await asyncio.wait_for(agent.run_agent(q, user_id=message.author.id), timeout=30)
+                    answer = await agent.run_agent(q, user_id=message.author.id, channel_id=message.channel.id)
                 else:
-                    # standard chat
-                    short_term.add_message(message.author.id, f"User: {query}")
-                    history = []
-                    for msg in short_term.get_messages(message.author.id)[-10:]:
-                        history.append({"role": "user", "content": msg})
-                    answer = await asyncio.wait_for(
-                        llm_client.chat(history + [{"role":"user","content": query}], max_tokens=1000),
-                        timeout=30
+                    # Use new memory system for DM context/history
+                    memory_manager.channel.add_message(
+                        message.channel.id, 
+                        query, 
+                        author=message.author.display_name or message.author.name
                     )
-                    short_term.add_message(message.author.id, f"Assistant: {answer}")
+                    prompt = memory_manager.build_prompt(
+                        user_id=message.author.id,
+                        channel_id=message.channel.id,
+                        user_message=query
+                    )
+                    answer = await llm_client.chat([
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": query}
+                    ], max_tokens=1000)
+                    memory_manager.channel.add_message(
+                        message.channel.id, 
+                        answer, 
+                        author="RICO"
+                    )
             except asyncio.TimeoutError:
                 answer = "Error: LLM or tool timed out. Please try again."
             except Exception as e:
