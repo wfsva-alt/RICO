@@ -1,5 +1,6 @@
 version: '3'
 services:
+<<<<<<< HEAD
   redis:
     image: redis:7-alpine
     ports:
@@ -9,6 +10,8 @@ services:
     restart: unless-stopped
     command: redis-server --appendonly yes
 
+=======
+>>>>>>> origin/main
   bot:
     build: .
     env_file:
@@ -16,6 +19,7 @@ services:
     volumes:
       - .:/app
     restart: on-failure
+<<<<<<< HEAD
     depends_on:
       - redis
     environment:
@@ -24,3 +28,5 @@ services:
 
 volumes:
   redis_data:
+=======
+>>>>>>> origin/main

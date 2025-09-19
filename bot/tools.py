@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 def tool_get_general_memory(query: str) -> str:
     """
     Searches general memory (RAG) for relevant entries. Input is a query string.
@@ -254,6 +255,14 @@ def tool_search_channel_history(args: str) -> str:
         return f"Error: {e}"
 
 # --- Other Tools ---
+=======
+# bot/tools.py
+import ast, operator as op, tempfile, subprocess, time, logging
+from bot.logger import logger
+from bot.config import CODE_EXEC_ENABLED
+
+# Allowed operators for calculator
+>>>>>>> origin/main
 _allowed_operators = {
     ast.Add: op.add, ast.Sub: op.sub, ast.Mult: op.mul,
     ast.Div: op.truediv, ast.Pow: op.pow, ast.USub: op.neg
@@ -261,6 +270,7 @@ _allowed_operators = {
 
 def tool_web_search(query: str) -> str:
     logger.info("web_search called with query: %s", query)
+<<<<<<< HEAD
     api_key = os.getenv("BRAVE_API_KEY")
     if not api_key:
         return "Error: BRAVE_API_KEY not set. Get one at https://search.brave.com/api."
@@ -282,6 +292,10 @@ def tool_web_search(query: str) -> str:
     except Exception as e:
         logger.exception("Brave search error: %s", e)
         return f"Error: {e}"
+=======
+    # Placeholder: integrate a real web search (SerpAPI/Bing/Google) by replacing below
+    return f"Search results (stub) for '{query}'."
+>>>>>>> origin/main
 
 def tool_calculator(expr: str) -> str:
     logger.info("calculator called with expr: %s", expr)
@@ -334,6 +348,7 @@ def tool_code_execute(code: str) -> str:
 
 TOOLS = {
     "web_search": tool_web_search,
+<<<<<<< HEAD
     "brave_search": tool_web_search,  # alias for clarity
     "calculate": tool_calculator,
     "file_store": tool_file_store,
@@ -349,4 +364,9 @@ TOOLS = {
     "get_general_memory_by_title": tool_get_general_memory_by_title,
     "get_channel_context": tool_get_channel_context,
     "search_channel_history": tool_search_channel_history
+=======
+    "calculate": tool_calculator,
+    "file_store": tool_file_store,
+    "code_execute": tool_code_execute
+>>>>>>> origin/main
 }
