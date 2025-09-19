@@ -1,5 +1,17 @@
 version: '3'
 services:
+<<<<<<< HEAD
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+=======
+>>>>>>> origin/main
   bot:
     build: .
     env_file:
@@ -7,3 +19,14 @@ services:
     volumes:
       - .:/app
     restart: on-failure
+<<<<<<< HEAD
+    depends_on:
+      - redis
+    environment:
+      - USE_REDIS=true
+      - REDIS_URL=redis://redis:6379/0
+
+volumes:
+  redis_data:
+=======
+>>>>>>> origin/main
