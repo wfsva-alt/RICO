@@ -1,15 +1,22 @@
 # bot/agent.py
 import json
 from bot.llm import LLMClient
+<<<<<<< HEAD
 from bot.tools import TOOLS, CREATOR_IDS
 from bot.logger import logger
 
 import re
 
+=======
+from bot.tools import TOOLS
+from bot.logger import logger
+
+>>>>>>> origin/main
 class Agent:
     def __init__(self):
         self.llm = LLMClient()
         self.system_prompt = (
+<<<<<<< HEAD
             "You are an autonomous agent. You MUST respond with valid JSON in this exact format:\n"
             "{\n"
             '  "steps": [\n'
@@ -64,6 +71,13 @@ class Agent:
         return prompt
 
     async def plan(self, user_query: str, user_id: int = None) -> dict:
+=======
+            "You are an autonomous agent. Produce a JSON plan with 'steps' where each step includes 'tool' and 'input'. "
+            "Also include an optional 'final_prompt' to craft the final answer."
+        )
+
+    async def plan(self, user_query: str) -> dict:
+>>>>>>> origin/main
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": f"User query: {user_query}\nPlease provide a JSON plan."}
@@ -71,6 +85,7 @@ class Agent:
         response = await self.llm.chat(messages)
         logger.debug("Planner raw response: %s", response)
         try:
+<<<<<<< HEAD
             # Try to extract JSON from the response (in case LLM adds extra text)
             response_clean = response.strip()
             if response_clean.startswith("```json"):
@@ -98,6 +113,15 @@ class Agent:
         self._current_channel_id = channel_id
         logger.debug(f"Agent execute_plan - channel_id: {channel_id}")
         
+=======
+            plan = json.loads(response)
+            return plan
+        except Exception:
+            logger.exception("Planner returned invalid JSON.")
+            return {"steps": [], "final_prompt": user_query}
+
+    async def execute_plan(self, plan: dict, user_query: str) -> str:
+>>>>>>> origin/main
         outputs = []
         max_tool_calls = 5
         calls = 0
@@ -112,6 +136,7 @@ class Agent:
                 outputs.append(f"[Unknown tool: {tool_name}]")
                 continue
             try:
+<<<<<<< HEAD
                 # If tool_input is not JSON and tool expects JSON, preprocess
                 if user_id is not None and tool_name in [
                     "add_core_memory", "add_general_memory", "add_user_memory",
@@ -119,12 +144,15 @@ class Agent:
                     "get_channel_context", "search_channel_history"
                 ]:
                     tool_input = self._preprocess_tool_args(tool_name, user_id, user_query)
+=======
+>>>>>>> origin/main
                 out = fn(tool_input)
                 outputs.append(f"{tool_name}({tool_input}) -> {out}")
             except Exception as e:
                 outputs.append(f"{tool_name} error: {e}")
             calls += 1
 
+<<<<<<< HEAD
         # Always search memory for relevant info and include in answer
         memory_snippets = []
         # Core memory (if creator)
@@ -165,3 +193,11 @@ class Agent:
         except Exception as e:
             logger.exception("Agent execution error: %s", e)
             return f"Error: {e}"
+=======
+        final_prompt = plan.get("final_prompt", user_query)
+        final_messages = [
+            {"role": "system", "content": "You are an assistant that uses tool outputs to answer clearly."},
+            {"role": "user", "content": final_prompt + "\n\nTool outputs:\n" + "\n".join(outputs)}
+        ]
+        return await self.llm.chat(final_messages)
+>>>>>>> origin/main
