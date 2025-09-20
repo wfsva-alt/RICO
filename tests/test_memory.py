@@ -1,5 +1,4 @@
 # tests/test_memory.py
-<<<<<<< HEAD
 
 from bot.memory_manager import MemoryManager
 
@@ -11,9 +10,6 @@ def test_channel_context_add_and_get():
     recent = mm.channel.get_recent(channel_id, limit=2)
     assert recent[0] == "there"
     assert recent[1] == "hi"
-=======
-from bot.memory import short_term, long_term
->>>>>>> origin/main
 
 def test_short_term():
     uid = 1
